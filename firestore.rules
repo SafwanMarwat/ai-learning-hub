@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    /* 
+     ⚠️ SECURITY WARNING: 
+     These rules are set to public (allow read, write: if true) because the app currently 
+     uses a "Local Auth" method (hardcoded admin credentials) rather than Firebase Auth.
+     
+     This means Firebase sees all users as "unauthenticated", so we must allow unauthenticated 
+     writes for the Admin Panel to work.
+     
+     For a production application with sensitive data, you should switch back to 
+     Firebase Authentication to properly secure your database.
+    */
+    
+    // Blog Posts
+    match /posts/{postId} {
+      allow read, write: if true;
+    }
+    
+    // Contacts (Contact Form)
+    match /contacts/{contactId} {
+      allow read, write: if true;
+    }
+    
+    // Subscribers (Newsletter)
+    match /subscribers/{subscriberId} {
+      allow read, write: if true;
+    }
+    
+    // Default catch-all
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

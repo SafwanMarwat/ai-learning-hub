@@ -1,0 +1,92 @@
+.admin-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.admin-search {
+    flex: 1;
+    min-width: 250px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
+}
+
+.admin-search svg {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.admin-search input {
+    flex: 1;
+    background: none;
+    border: none;
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    outline: none;
+}
+
+.admin-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.admin-filter-buttons {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.admin-table__post-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.admin-table__post-title img {
+    width: 48px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+}
+
+.admin-table__actions {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.admin-table__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.admin-table__action:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.admin-table__action--danger:hover {
+    background: var(--error-50);
+    color: var(--error-600);
+}
+
+.admin-empty {
+    text-align: center;
+    padding: var(--space-12);
+}
+
+.admin-empty p {
+    margin-bottom: var(--space-4);
+}

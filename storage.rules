@@ -1,0 +1,13 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    /* 
+     ⚠️ SECURITY WARNING: 
+     These rules are set to public because the app uses "Local Auth".
+    */
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}

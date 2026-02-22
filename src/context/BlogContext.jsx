@@ -1,0 +1,290 @@
+import { createContext, useContext, useState, useEffect } from 'react'
+import {
+    collection,
+    doc,
+    addDoc,
+    updateDoc,
+    setDoc,
+    deleteDoc,
+    getDocs,
+    getDoc,
+    query,
+    where,
+    orderBy,
+    serverTimestamp,
+    increment
+} from 'firebase/firestore'
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { db, storage } from '../firebase/config'
+import { placeholderPosts } from '../data/placeholderData'
+
+const BlogContext = createContext()
+
+// Default categories
+const defaultCategories = [
+    { id: 'ai-tools', name: 'AI Tools', color: 'purple' },
+    { id: 'freelancing', name: 'Freelancing', color: 'blue' },
+    { id: 'earning-guides', name: 'Earning Guides', color: 'green' },
+    { id: 'online-basics', name: 'Online Basics', color: 'orange' },
+    { id: 'resources', name: 'Resources', color: 'pink' }
+]
+
+export function BlogProvider({ children }) {
+    const [posts, setPosts] = useState([])
+    const [categories] = useState(defaultCategories)
+    const [settings, setSettings] = useState({
+        social: { twitter: '', facebook: '', linkedin: '', instagram: '' },
+        adsenseId: ''
+    })
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+
+    // Fetch all posts from Firestore
+    const fetchPosts = async () => {
+        setLoading(true)
+        try {
+            const q = query(
+                collection(db, 'posts'),
+                orderBy('createdAt', 'desc')
+            )
+            const snapshot = await getDocs(q)
+            const postsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+            }))
+
+            if (postsData.length === 0) {
+                setPosts(placeholderPosts)
+            } else {
+                // If there are posts but NONE are published, add placeholders for public view
+                // This ensures the site doesn't look broken while user is working on drafts
+                const hasPublished = postsData.some(p => p.status === 'published')
+                if (!hasPublished) {
+                    setPosts([...postsData, ...placeholderPosts])
+                } else {
+                    setPosts(postsData)
+                }
+            }
+            setError(null)
+        } catch (err) {
+            console.error('Error fetching posts:', err)
+            setError('Failed to load posts')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Fetch global settings
+    const fetchSettings = async () => {
+        try {
+            const docRef = doc(db, 'settings', 'global')
+            const docSnap = await getDoc(docRef)
+            if (docSnap.exists()) {
+                setSettings(docSnap.data())
+            }
+        } catch (err) {
+            console.error('Error fetching settings:', err)
+        }
+    }
+
+    // Update settings
+    const updateSettings = async (newSettings) => {
+        try {
+            const docRef = doc(db, 'settings', 'global')
+            await setDoc(docRef, newSettings, { merge: true })
+            setSettings(prev => ({ ...prev, ...newSettings }))
+            return { success: true }
+        } catch (err) {
+            console.error('Error updating settings:', err)
+            return { success: false, error: err.message }
+        }
+    }
+
+    // Load posts and settings on mount
+    useEffect(() => {
+        fetchPosts()
+        fetchSettings()
+    }, [])
+
+    // Get single post by slug
+    const getPostBySlug = async (slug) => {
+        try {
+            const q = query(collection(db, 'posts'), where('slug', '==', slug))
+            const snapshot = await getDocs(q)
+            if (snapshot.empty) return null
+            const doc = snapshot.docs[0]
+            return { id: doc.id, ...doc.data() }
+        } catch (err) {
+            console.error('Error fetching post:', err)
+            return null
+        }
+    }
+
+    // Get single post by ID
+    const getPostById = async (id) => {
+        try {
+            const docRef = doc(db, 'posts', id)
+            const docSnap = await getDoc(docRef)
+            if (!docSnap.exists()) return null
+            return { id: docSnap.id, ...docSnap.data() }
+        } catch (err) {
+            console.error('Error fetching post:', err)
+            return null
+        }
+    }
+
+    // Create new post
+    const createPost = async (postData) => {
+        try {
+            const slug = generateSlug(postData.title)
+            const newPost = {
+                ...postData,
+                slug,
+                views: 0,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            }
+            const docRef = await addDoc(collection(db, 'posts'), newPost)
+            await fetchPosts() // Refresh posts
+            return { success: true, id: docRef.id, slug }
+        } catch (err) {
+            console.error('Error creating post:', err)
+            return { success: false, error: err.message }
+        }
+    }
+
+    // Update existing post
+    const updatePost = async (id, postData) => {
+        try {
+            const docRef = doc(db, 'posts', id)
+            await updateDoc(docRef, {
+                ...postData,
+                updatedAt: serverTimestamp()
+            })
+            await fetchPosts() // Refresh posts
+            return { success: true }
+        } catch (err) {
+            console.error('Error updating post:', err)
+            return { success: false, error: err.message }
+        }
+    }
+
+    // Delete post
+    const deletePost = async (id) => {
+        try {
+            await deleteDoc(doc(db, 'posts', id))
+            await fetchPosts() // Refresh posts
+            return { success: true }
+        } catch (err) {
+            console.error('Error deleting post:', err)
+            return { success: false, error: err.message }
+        }
+    }
+
+    // Increment view count
+    const incrementViews = async (id) => {
+        try {
+            const docRef = doc(db, 'posts', id)
+            await updateDoc(docRef, { views: increment(1) })
+        } catch (err) {
+            console.error('Error incrementing views:', err)
+        }
+    }
+
+    // Upload image to Firebase Storage
+    const uploadImage = async (file) => {
+        try {
+            const fileName = `images/${Date.now()}_${file.name}`
+            const storageRef = ref(storage, fileName)
+            await uploadBytes(storageRef, file)
+            const url = await getDownloadURL(storageRef)
+            return { success: true, url }
+        } catch (err) {
+            console.error('Error uploading image:', err)
+            return { success: false, error: err.message }
+        }
+    }
+
+    // Delete image from Firebase Storage
+    const deleteImage = async (url) => {
+        try {
+            const storageRef = ref(storage, url)
+            await deleteObject(storageRef)
+            return { success: true }
+        } catch (err) {
+            console.error('Error deleting image:', err)
+            return { success: false, error: err.message }
+        }
+    }
+
+    // Generate URL-friendly slug
+    const generateSlug = (title) => {
+        return title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '')
+            + '-' + Date.now().toString(36)
+    }
+
+    // Helper functions
+    const getPublishedPosts = () => posts.filter(p => p.status === 'published')
+    const getDraftPosts = () => posts.filter(p => p.status === 'draft')
+    const getFeaturedPosts = () => posts.filter(p => p.featured && p.status === 'published')
+    const getPostsByCategory = (categoryId) => posts.filter(p => p.category === categoryId && p.status === 'published')
+
+    // Stats for admin dashboard
+    const getStats = () => ({
+        totalPosts: posts.length,
+        published: getPublishedPosts().length,
+        drafts: getDraftPosts().length,
+        totalViews: posts.reduce((sum, p) => sum + (p.views || 0), 0)
+    })
+
+    // Get post from state (synchronous) - Fixes BlogPost.jsx crash
+    const getPost = (slug) => {
+        const found = posts.find(p => p.slug === slug)
+        // If not found in state (e.g. deep link), we might need async fetch, 
+        // but for now we'll rely on state being loaded or return undefined.
+        // For placeholders to work, state MUST be loaded.
+        return found
+    }
+
+    const value = {
+        posts,
+        categories,
+        loading,
+        error,
+        settings,
+        updateSettings,
+        fetchPosts,
+        getPost, // Exporting the sync helper
+        getPostBySlug,
+        getPostById,
+        createPost,
+        updatePost,
+        deletePost,
+        incrementViews,
+        uploadImage,
+        deleteImage,
+        getPublishedPosts,
+        getDraftPosts,
+        getFeaturedPosts,
+        getPostsByCategory,
+        getStats
+    }
+
+    return (
+        <BlogContext.Provider value={value}>
+            {children}
+        </BlogContext.Provider>
+    )
+}
+
+export function useBlog() {
+    const context = useContext(BlogContext)
+    if (!context) {
+        throw new Error('useBlog must be used within a BlogProvider')
+    }
+    return context
+}

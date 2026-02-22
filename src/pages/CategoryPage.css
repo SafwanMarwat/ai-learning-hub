@@ -1,0 +1,217 @@
+.category-page {
+    padding-top: var(--header-height);
+}
+
+.category-hero {
+    padding: var(--space-16) 0;
+    text-align: center;
+}
+
+.category-hero--primary {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--secondary-600) 100%);
+    color: white;
+}
+
+.category-hero--secondary {
+    background: linear-gradient(135deg, var(--secondary-500) 0%, var(--primary-600) 100%);
+    color: white;
+}
+
+.category-hero--accent {
+    background: linear-gradient(135deg, var(--accent-500) 0%, var(--primary-600) 100%);
+    color: white;
+}
+
+.category-hero--success {
+    background: linear-gradient(135deg, var(--success-500) 0%, var(--accent-600) 100%);
+    color: white;
+}
+
+.category-hero__icon {
+    margin-bottom: var(--space-4);
+    opacity: 0.9;
+}
+
+.category-hero h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    margin-bottom: var(--space-4);
+    color: white;
+}
+
+.category-hero p {
+    font-size: var(--text-lg);
+    opacity: 0.9;
+    max-width: 600px;
+    margin: 0 auto;
+    color: white;
+}
+
+/* Featured Section */
+.category-featured {
+    padding: var(--space-16) 0;
+    background: var(--bg-secondary);
+}
+
+.category-featured h2 {
+    font-size: var(--text-2xl);
+    text-align: center;
+    margin-bottom: var(--space-8);
+}
+
+.tools-grid {
+    display: grid;
+    gap: var(--space-4);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+    .tools-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.tool-card {
+    background: var(--bg-elevated);
+    padding: var(--space-5);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-primary);
+}
+
+.tool-card h3 {
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-2);
+}
+
+.tool-card__rating {
+    display: flex;
+    gap: var(--space-1);
+    color: var(--warning-500);
+    margin-bottom: var(--space-2);
+}
+
+.tool-card p {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin: 0;
+}
+
+/* Posts Section */
+.category-posts {
+    padding: var(--space-16) 0;
+}
+
+.category-posts h2 {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-8);
+}
+
+.category-posts__grid {
+    display: grid;
+    gap: var(--space-6);
+}
+
+@media (min-width: 640px) {
+    .category-posts__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .category-posts__grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.category-empty {
+    text-align: center;
+    padding: var(--space-10);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+}
+
+.category-empty p {
+    margin-bottom: var(--space-4);
+}
+
+/* Guide Cards */
+.guides-grid {
+    display: grid;
+    gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+    .guides-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .guides-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.guide-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-elevated);
+    padding: var(--space-6);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-primary);
+    text-decoration: none;
+    transition: all var(--transition-base);
+}
+
+.guide-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-300);
+}
+
+.guide-card__icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-4);
+}
+
+.guide-card__icon--beginner {
+    background: var(--success-50);
+    color: var(--success-600);
+}
+
+.guide-card__icon--intermediate {
+    background: var(--warning-50);
+    color: var(--warning-600);
+}
+
+.guide-card__icon--advanced {
+    background: var(--error-50);
+    color: var(--error-600);
+}
+
+.guide-card h3 {
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-2);
+}
+
+.guide-card p {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin: 0;
+    flex: 1;
+}
+
+.guide-card span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--primary-500);
+}
