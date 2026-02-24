@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 
+const AuthContext = createContext()
 // Simple local auth - no Firebase required
 const ADMIN_CREDENTIALS = {
     email: 'admin@aiearninghub.com',
