@@ -1,6 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react'
 
-const AuthContext = createContext()
+import React, { createContext, useContext, useState, useEffect } from 'react'
 
 // Simple local auth - no Firebase required
 const ADMIN_CREDENTIALS = {
