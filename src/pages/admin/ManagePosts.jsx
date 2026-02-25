@@ -1,3 +1,5 @@
+console.log("NEW MANAGE POSTS BUILD")
+
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AdminSidebar from '../../components/admin/AdminSidebar'
