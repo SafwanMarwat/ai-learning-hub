@@ -250,6 +250,23 @@ export function BlogProvider({ children }) {
         return found
     }
 
+
+
+
+
+    // 🔎 Search posts (used by SearchBar)
+const searchPosts = (query) => {
+    const lowerQuery = query.toLowerCase()
+
+    return posts.filter(post =>
+        post.status === 'published' && (
+            post.title?.toLowerCase().includes(lowerQuery) ||
+            post.excerpt?.toLowerCase().includes(lowerQuery) ||
+            post.category?.toLowerCase().includes(lowerQuery)
+        )
+    )
+}
+
     const value = {
         posts,
         categories,
@@ -271,7 +288,9 @@ export function BlogProvider({ children }) {
         getDraftPosts,
         getFeaturedPosts,
         getPostsByCategory,
-        getStats
+        getStats,
+        searchPosts
+        
     }
 
     return (
