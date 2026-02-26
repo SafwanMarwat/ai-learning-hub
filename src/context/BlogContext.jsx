@@ -15,6 +15,8 @@ import {
     increment
 } from 'firebase/firestore'
 
+import { db } from '../firebase/config'
+
 import { placeholderPosts } from '../data/placeholderData'
 
 const BlogContext = createContext()
