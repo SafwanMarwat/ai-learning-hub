@@ -14,8 +14,7 @@ import {
     serverTimestamp,
     increment
 } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import { db, storage } from '../firebase/config'
+
 import { placeholderPosts } from '../data/placeholderData'
 
 const BlogContext = createContext()
@@ -192,32 +191,34 @@ export function BlogProvider({ children }) {
         }
     }
 
-    // Upload image to Firebase Storage
-    const uploadImage = async (file) => {
-        try {
-            const fileName = `images/${Date.now()}_${file.name}`
-            const storageRef = ref(storage, fileName)
-            await uploadBytes(storageRef, file)
-            const url = await getDownloadURL(storageRef)
-            return { success: true, url }
-        } catch (err) {
-            console.error('Error uploading image:', err)
-            return { success: false, error: err.message }
-        }
-    }
+   // Upload image to Cloudinary
+const uploadImage = async (file) => {
+    try {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('upload_preset', 'AIEARNINGHUB')
 
-    // Delete image from Firebase Storage
-    const deleteImage = async (url) => {
-        try {
-            const storageRef = ref(storage, url)
-            await deleteObject(storageRef)
-            return { success: true }
-        } catch (err) {
-            console.error('Error deleting image:', err)
-            return { success: false, error: err.message }
-        }
-    }
+        const response = await fetch(
+            'https://api.cloudinary.com/v1_1/do6mpxuqw/image/upload',
+            {
+                method: 'POST',
+                body: formData
+            }
+        )
 
+        const data = await response.json()
+
+        if (!response.ok) {
+            throw new Error(data.error?.message || 'Upload failed')
+        }
+
+        return { success: true, url: data.secure_url }
+
+    } catch (err) {
+        console.error('Cloudinary upload error:', err)
+        return { success: false, error: err.message }
+    }
+}
     // Generate URL-friendly slug
     const generateSlug = (title) => {
         return title
@@ -283,7 +284,6 @@ const searchPosts = (query) => {
         deletePost,
         incrementViews,
         uploadImage,
-        deleteImage,
         getPublishedPosts,
         getDraftPosts,
         getFeaturedPosts,
