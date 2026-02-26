@@ -30,6 +30,9 @@ const defaultCategories = [
     { id: 'resources', name: 'Resources', color: 'pink' }
 ]
 
+// Track which post IDs have already been counted this session
+const viewedPosts = new Set()
+
 export function BlogProvider({ children }) {
     const [posts, setPosts] = useState([])
     const [categories] = useState(defaultCategories)
@@ -58,8 +61,6 @@ export function BlogProvider({ children }) {
             if (postsData.length === 0) {
                 setPosts(placeholderPosts)
             } else {
-                // If there are posts but NONE are published, add placeholders for public view
-                // This ensures the site doesn't look broken while user is working on drafts
                 const hasPublished = postsData.some(p => p.status === 'published')
                 if (!hasPublished) {
                     setPosts([...postsData, ...placeholderPosts])
@@ -147,7 +148,7 @@ export function BlogProvider({ children }) {
                 updatedAt: serverTimestamp()
             }
             const docRef = await addDoc(collection(db, 'posts'), newPost)
-            await fetchPosts() // Refresh posts
+            await fetchPosts()
             return { success: true, id: docRef.id, slug }
         } catch (err) {
             console.error('Error creating post:', err)
@@ -163,7 +164,7 @@ export function BlogProvider({ children }) {
                 ...postData,
                 updatedAt: serverTimestamp()
             })
-            await fetchPosts() // Refresh posts
+            await fetchPosts()
             return { success: true }
         } catch (err) {
             console.error('Error updating post:', err)
@@ -175,7 +176,7 @@ export function BlogProvider({ children }) {
     const deletePost = async (id) => {
         try {
             await deleteDoc(doc(db, 'posts', id))
-            await fetchPosts() // Refresh posts
+            await fetchPosts()
             return { success: true }
         } catch (err) {
             console.error('Error deleting post:', err)
@@ -183,73 +184,90 @@ export function BlogProvider({ children }) {
         }
     }
 
-    // Increment view count
+    // Increment view count — fixes:
+    // 1. Local state was never updated so UI always showed stale count
+    // 2. No deduplication, so every re-render would fire another increment
     const incrementViews = async (id) => {
+        // Don't count the same post twice in one session
+        if (viewedPosts.has(id)) return
+        viewedPosts.add(id)
+
         try {
             const docRef = doc(db, 'posts', id)
             await updateDoc(docRef, { views: increment(1) })
+
+            // Update local state immediately so UI reflects the new count
+            setPosts(prev =>
+                prev.map(p =>
+                    p.id === id ? { ...p, views: (p.views || 0) + 1 } : p
+                )
+            )
         } catch (err) {
             console.error('Error incrementing views:', err)
+            // Roll back the session dedup if Firestore write failed
+            viewedPosts.delete(id)
         }
     }
+
     // Add comment to a post
-const addComment = async (postId, commentData) => {
-    try {
-        const postRef = doc(db, 'posts', postId)
+    const addComment = async (postId, commentData) => {
+        try {
+            const postRef = doc(db, 'posts', postId)
 
-        const newComment = {
-            id: Date.now().toString(),
-            name: commentData.name,
-            content: commentData.content,
-            createdAt: new Date().toISOString()
-        }
-
-        const postSnap = await getDoc(postRef)
-        if (!postSnap.exists()) return
-
-        const existingComments = postSnap.data().comments || []
-
-        await updateDoc(postRef, {
-            comments: [...existingComments, newComment]
-        })
-
-        await fetchPosts() // refresh state
-        return { success: true }
-
-    } catch (err) {
-        console.error('Error adding comment:', err)
-        return { success: false, error: err.message }
-    }
-}
-
-   // Upload image to Cloudinary
-const uploadImage = async (file) => {
-    try {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('upload_preset', 'AIEARNINGHUB')
-
-        const response = await fetch(
-            'https://api.cloudinary.com/v1_1/do6mpxuqw/image/upload',
-            {
-                method: 'POST',
-                body: formData
+            const newComment = {
+                id: Date.now().toString(),
+                name: commentData.name,
+                content: commentData.content,
+                createdAt: new Date().toISOString()
             }
-        )
 
-        const data = await response.json()
+            const postSnap = await getDoc(postRef)
+            if (!postSnap.exists()) return
 
-        if (!response.ok) {
-            throw new Error(data.error?.message || 'Upload failed')
+            const existingComments = postSnap.data().comments || []
+
+            await updateDoc(postRef, {
+                comments: [...existingComments, newComment]
+            })
+
+            await fetchPosts()
+            return { success: true }
+
+        } catch (err) {
+            console.error('Error adding comment:', err)
+            return { success: false, error: err.message }
         }
-
-        return { success: true, url: data.secure_url }
-
-    } catch (err) {
-        console.error('Cloudinary upload error:', err)
-        return { success: false, error: err.message }
     }
-}
+
+    // Upload image to Cloudinary
+    const uploadImage = async (file) => {
+        try {
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('upload_preset', 'AIEARNINGHUB')
+
+            const response = await fetch(
+                'https://api.cloudinary.com/v1_1/do6mpxuqw/image/upload',
+                {
+                    method: 'POST',
+                    body: formData
+                }
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error?.message || 'Upload failed')
+            }
+
+            return { success: true, url: data.secure_url }
+
+        } catch (err) {
+            console.error('Cloudinary upload error:', err)
+            return { success: false, error: err.message }
+        }
+    }
+
     // Generate URL-friendly slug
     const generateSlug = (title) => {
         return title
@@ -273,31 +291,23 @@ const uploadImage = async (file) => {
         totalViews: posts.reduce((sum, p) => sum + (p.views || 0), 0)
     })
 
-    // Get post from state (synchronous) - Fixes BlogPost.jsx crash
+    // Get post from state (synchronous)
     const getPost = (slug) => {
-        const found = posts.find(p => p.slug === slug)
-        // If not found in state (e.g. deep link), we might need async fetch, 
-        // but for now we'll rely on state being loaded or return undefined.
-        // For placeholders to work, state MUST be loaded.
-        return found
+        return posts.find(p => p.slug === slug)
     }
 
+    // Search posts (used by SearchBar)
+    const searchPosts = (query) => {
+        const lowerQuery = query.toLowerCase()
 
-
-
-
-    // 🔎 Search posts (used by SearchBar)
-const searchPosts = (query) => {
-    const lowerQuery = query.toLowerCase()
-
-    return posts.filter(post =>
-        post.status === 'published' && (
-            post.title?.toLowerCase().includes(lowerQuery) ||
-            post.excerpt?.toLowerCase().includes(lowerQuery) ||
-            post.category?.toLowerCase().includes(lowerQuery)
+        return posts.filter(post =>
+            post.status === 'published' && (
+                post.title?.toLowerCase().includes(lowerQuery) ||
+                post.excerpt?.toLowerCase().includes(lowerQuery) ||
+                post.category?.toLowerCase().includes(lowerQuery)
+            )
         )
-    )
-}
+    }
 
     const value = {
         posts,
@@ -307,7 +317,7 @@ const searchPosts = (query) => {
         settings,
         updateSettings,
         fetchPosts,
-        getPost, // Exporting the sync helper
+        getPost,
         getPostBySlug,
         getPostById,
         createPost,
@@ -322,7 +332,6 @@ const searchPosts = (query) => {
         getPostsByCategory,
         getStats,
         searchPosts
-        
     }
 
     return (
