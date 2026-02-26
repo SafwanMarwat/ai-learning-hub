@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Calendar, Clock, Eye, ArrowLeft, Share2, Twitter, Linkedin, Facebook, MessageCircle } from 'lucide-react'
 import { useBlog } from '../context/BlogContext'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdSlot from '../components/AdSlot'
 import BlogCard from '../components/BlogCard'
 import './BlogPost.css'
@@ -9,12 +9,19 @@ import './BlogPost.css'
 export default function BlogPost() {
     const { slug } = useParams()
     const navigate = useNavigate()
-    const { getPost, getPublishedPosts, addComment } = useBlog()
+    const { getPost, getPublishedPosts, addComment, incrementViews } = useBlog()
     const post = getPost(slug)
 
     const [commentForm, setCommentForm] = useState({ name: '', email: '', content: '' })
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [commentSuccess, setCommentSuccess] = useState(false)
+
+    // Fire incrementViews once when the post loads
+    useEffect(() => {
+        if (post?.id) {
+            incrementViews(post.id)
+        }
+    }, [post?.id])
 
     if (!post) {
         return (
@@ -59,7 +66,6 @@ export default function BlogPost() {
         e.preventDefault()
         setIsSubmitting(true)
 
-        // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 500))
 
         addComment(post.id, {
