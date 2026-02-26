@@ -192,6 +192,35 @@ export function BlogProvider({ children }) {
             console.error('Error incrementing views:', err)
         }
     }
+    // Add comment to a post
+const addComment = async (postId, commentData) => {
+    try {
+        const postRef = doc(db, 'posts', postId)
+
+        const newComment = {
+            id: Date.now().toString(),
+            name: commentData.name,
+            content: commentData.content,
+            createdAt: new Date().toISOString()
+        }
+
+        const postSnap = await getDoc(postRef)
+        if (!postSnap.exists()) return
+
+        const existingComments = postSnap.data().comments || []
+
+        await updateDoc(postRef, {
+            comments: [...existingComments, newComment]
+        })
+
+        await fetchPosts() // refresh state
+        return { success: true }
+
+    } catch (err) {
+        console.error('Error adding comment:', err)
+        return { success: false, error: err.message }
+    }
+}
 
    // Upload image to Cloudinary
 const uploadImage = async (file) => {
@@ -285,6 +314,7 @@ const searchPosts = (query) => {
         updatePost,
         deletePost,
         incrementViews,
+        addComment,
         uploadImage,
         getPublishedPosts,
         getDraftPosts,
